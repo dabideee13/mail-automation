@@ -1,6 +1,3 @@
-data/credentials.json
-*credentials.json
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
