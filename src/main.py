@@ -8,9 +8,10 @@ import argparse
 import email
 import imaplib
 from email.header import decode_header
+from typing import Any
 
 from logger import logger
-from tools import get_credentials, get_senders
+from tools import get_credentials, get_senders, split_messages
 
 
 def login(
@@ -30,16 +31,31 @@ def login(
     return imap
 
 
+def fetch(imap, message: bytes) -> list[tuple[bytes, bytes]]:
+    _, msg = imap.fetch(message, "(RFC822)")
+    return msg[0][1]
+
+
+def get_message(
+    imap: imaplib.IMAP4_SSL,
+    **kwargs: Any
+) -> tuple[imaplib.IMAP4_SSL, list[bytes]]:
+
+    _, messages = imap.search(None, "ALL")
+
+    if 'sender' in kwargs.keys():
+        _, messages = imap.search(None, f'FROM {kwargs["sender"]}')
+
+    return imap, split_messages(messages)
+
+
 def delete_mails(imap: imaplib.IMAP4_SSL, sender: str) -> None:
     """
     Source: https://www.thepythoncode.com/article/deleting-emails-in-python
     """
 
-    status, messages = imap.search(None, f'FROM {sender}')
-    messages = messages[0].split(b' ')
-
     # Main loop
-    for mail in messages:
+    for mail in get_message(imap, sender=sender):
 
         try:
             _, msg = imap.fetch(mail, "(RFC822)")

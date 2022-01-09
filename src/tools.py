@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from typing import Any, Union
 
@@ -42,3 +43,42 @@ def get_credentials() -> dict[str, str]:
         credentials = _load_json(get_file(path))
 
     return credentials
+
+
+def split_messages(messages: list[bytes]) -> list[bytes]:
+    return messages[0].split(b' ')
+
+
+def _mail_only(matches: list[str]) -> str:
+    return [
+        string for string in matches
+        if ".com" and "@" in string
+    ][0]
+
+
+def _extract_name(text: str) -> str:
+    pattern = r"(?<=\")(.*?)(?=\")"
+    return re.findall(pattern, text)[0]
+
+
+def _extract_mail(text: str) -> str:
+    pattern = r"(?<=<)(.*?)(?=>)"
+    return re.findall(pattern, text)[0]
+
+
+def extract_sender(mail: bytes) -> tuple[str, str]:
+    if not isinstance(mail, bytes):
+        raise TypeError("Mail must be of type bytes")
+
+    pattern = r"(?=From)(.*?)(?=\r\n)"
+
+    try:
+        matches = re.findall(pattern, mail.decode("UTF-8"))
+
+        if len(matches) > 1:
+            matches = _mail_only(matches)
+
+        return _extract_name(matches[0]), _extract_mail(matches[0])
+
+    except:
+        return "", ""
